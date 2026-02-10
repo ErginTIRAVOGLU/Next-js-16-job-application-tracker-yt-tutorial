@@ -62,7 +62,7 @@ function DroppableColumn({ column, config, boardId }: { column: Column; config: 
 }
 
 const KanbanBoard = ({ board, userId }: KanbanBoardProps) => {
-
+ 
   const columns = board?.columns || [];
   return (
     <>
@@ -74,7 +74,7 @@ const KanbanBoard = ({ board, userId }: KanbanBoardProps) => {
                 color: "bg-gray-500",
                 icon: <Calendar className='h-4 w-4' />
               };
-              return <DroppableColumn key={key} column={col} config={config} boardId={board.id} />
+              return <DroppableColumn key={key} column={col} config={config} boardId={board._id} />
             })
           }
 

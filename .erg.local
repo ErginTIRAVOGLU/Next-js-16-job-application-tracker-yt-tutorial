@@ -1,5 +1,0 @@
-MONGODB_URI=mongodb+srv://ergintiravoglu_db_user:tJTun1VBuAtGoZu8@cluster0.pjlb8ze.mongodb.net/job-board
-
-BETTER_AUTH_SECRET=zVTkU8wC4fC8hl2eFMGs9n0IaOzsMsxJ
-
-BETTER_AUTH_URL=http://localhost:3000 # Base URL of your app
