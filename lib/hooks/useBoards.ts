@@ -5,113 +5,86 @@ import { Board, Column, JobApplication } from "../models/models.types";
 import { updateJobApplication } from "../actions/job-applications";
 
 export function useBoard(initialBoard?: Board | null) {
-    const [board, setBoard] = useState<Board | null>(initialBoard || null);
-    const [columns, setColumns] = useState<Column[]>(initialBoard?.columns || []);
-    const [error, setError] = useState<string | null>(null);
+  const [board, setBoard] = useState<Board | null>(initialBoard || null);
+  const [columns, setColumns] = useState<Column[]>(initialBoard?.columns || []);
+  const [error, setError] = useState<string | null>(null);
 
-    useEffect(() => {
-        if (initialBoard) {
-            setBoard(initialBoard);
-            setColumns(initialBoard.columns || []);
-        }
-    }, [initialBoard]);
-
-    async function moveJob(
-        jobApplicationId: string,
-        newColumnId: string,
-        newOrder: number
-    ) {
-        // Store previous state for rollback
-        const previousColumns = [...columns];
-
-        try {
-            // Find the job and its current column
-            let jobToMove: JobApplication | null = null;
-            let oldColumnId: string | null = null;
-
-            for (const column of columns) {
-                const foundJob = column.jobApplications?.find(
-                    (job) => job._id === jobApplicationId
-                );
-                if (foundJob) {
-                    jobToMove = foundJob;
-                    oldColumnId = column._id;
-                    break;
-                }
-            }
-
-            if (!jobToMove || !oldColumnId) {
-                setError("Job application not found");
-                return;
-            }
-
-            // Update local state optimistically
-            const updatedColumns = columns.map((column) => {
-                // Handle same-column reorder
-                if (column._id === oldColumnId && oldColumnId === newColumnId) {
-                    const updatedJobs = (column.jobApplications || []).filter(
-                        (job) => job._id !== jobApplicationId
-                    );
-                    // Update job metadata
-                    const updatedJob = {
-                        ...jobToMove,
-                        columnId: newColumnId,
-                        order: newOrder,
-                    };
-                    updatedJobs.splice(newOrder, 0, updatedJob);
-                    return {
-                        ...column,
-                        jobApplications: updatedJobs,
-                    };
-                }
-                // Remove from old column (cross-column move)
-                if (column._id === oldColumnId) {
-                    return {
-                        ...column,
-                        jobApplications: column.jobApplications?.filter(
-                            (job) => job._id !== jobApplicationId
-                        ) || [],
-                    };
-                }
-                // Add to new column (cross-column move)
-                if (column._id === newColumnId) {
-                    const updatedJobs = [...(column.jobApplications || [])];
-                    // Update job metadata before inserting
-                    const updatedJob = {
-                        ...jobToMove,
-                        columnId: newColumnId,
-                        order: newOrder,
-                    };
-                    updatedJobs.splice(newOrder, 0, updatedJob);
-                    return {
-                        ...column,
-                        jobApplications: updatedJobs,
-                    };
-                }
-                return column;
-            });
-
-            setColumns(updatedColumns);
-
-            // Persist to server
-            const result = await updateJobApplication(jobApplicationId, {
-                columnId: newColumnId,
-                order: newOrder,
-            });
-
-            if (result.error) {
-                // Rollback on error
-                setColumns(previousColumns);
-                setError(result.error);
-            } else {
-                setError(null);
-            }
-        } catch (err) {
-            // Rollback on exception
-            setColumns(previousColumns);
-            setError(err instanceof Error ? err.message : "Failed to move job application");
-        }
+  useEffect(() => {
+    if (initialBoard) {
+      setBoard(initialBoard);
+      setColumns(initialBoard.columns || []);
     }
+  }, [initialBoard]);
 
-    return { board, columns, error, moveJob };
+  async function moveJob(
+    jobApplicationId: string,
+    newColumnId: string,
+    newOrder: number
+  ) {
+    setColumns((prev) => {
+      const newColumns = prev.map((col) => ({
+        ...col,
+        jobApplications: [...col.jobApplications],
+      }));
+
+      // Find and remove job from the old column
+
+      let jobToMove: JobApplication | null = null;
+      let oldColumnId: string | null = null;
+
+      for (const col of newColumns) {
+        const jobIndex = col.jobApplications.findIndex(
+          (j) => j._id === jobApplicationId
+        );
+        if (jobIndex !== -1 && jobIndex !== undefined) {
+          jobToMove = col.jobApplications[jobIndex];
+          oldColumnId = col._id;
+          col.jobApplications = col.jobApplications.filter(
+            (job) => job._id !== jobApplicationId
+          );
+          break;
+        }
+      }
+
+      if (jobToMove && oldColumnId) {
+        const targetColumnIndex = newColumns.findIndex(
+          (col) => col._id === newColumnId
+        );
+        if (targetColumnIndex !== -1) {
+          const targetColumn = newColumns[targetColumnIndex];
+          const currentJobs = targetColumn.jobApplications || [];
+
+          const updatedJobs = [...currentJobs];
+          updatedJobs.splice(newOrder, 0, {
+            ...jobToMove,
+            columnId: newColumnId,
+            order: newOrder * 100,
+          });
+
+          const jobsWithUpdatedOrders = updatedJobs.map((job, idx) => ({
+            ...job,
+            order: idx * 100,
+          }));
+
+          newColumns[targetColumnIndex] = {
+            ...targetColumn,
+            jobApplications: jobsWithUpdatedOrders,
+          };
+        }
+      }
+
+      return newColumns;
+    });
+
+    try {
+      const result = await updateJobApplication(jobApplicationId, {
+        columnId: newColumnId,
+        order: newOrder,
+      });
+    } catch (err) {
+      console.error("Error", err);
+    }
+  }
+
+  return { board, columns, error, moveJob };
 }
