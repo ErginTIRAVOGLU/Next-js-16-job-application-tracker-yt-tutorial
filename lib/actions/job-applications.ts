@@ -116,6 +116,8 @@ export async function updateJobApplication(
         return { error: "Unauthorized" };
     }
 
+    await connectDB();
+
     const jobApplication = await JobApplication.findById(id);
 
     if (!jobApplication) {
@@ -148,6 +150,17 @@ export async function updateJobApplication(
         newColumnId && newColumnId !== currentColumnId;
 
     if (isMovingToDifferentColumn) {
+        // Validate target column ownership
+        const targetColumn = await Column.findById(newColumnId);
+
+        if (!targetColumn) {
+            return { error: "Target column not found" };
+        }
+
+        if (targetColumn.boardId.toString() !== jobApplication.boardId.toString()) {
+            return { error: "Cannot move job application to a column from a different board" };
+        }
+
         await Column.findByIdAndUpdate(currentColumnId, {
             $pull: { jobApplications: id },
         });
@@ -241,6 +254,8 @@ export async function deleteJobApplication(id: string) {
     if (!session?.user) {
         return { error: "Unauthorized" };
     }
+
+    await connectDB();
 
     const jobApplication = await JobApplication.findById(id);
 

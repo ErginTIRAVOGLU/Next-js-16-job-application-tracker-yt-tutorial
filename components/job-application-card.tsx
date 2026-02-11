@@ -100,7 +100,14 @@ const JobApplicationCard = ({ job, columns }: JobApplicationCardProps) => {
                                 </div>
                             )}
                             {job.jobUrl && (
-                                <a href={job.jobUrl} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1">
+                                <a 
+                                    href={job.jobUrl} 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    onClick={(e) => e.stopPropagation()} 
+                                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-1"
+                                    aria-label={`Open ${job.position} at ${job.company} in new tab`}
+                                >
                                     <ExternalLink className="h-3 w-3" />
                                 </a>
                             )}
@@ -146,8 +153,8 @@ const JobApplicationCard = ({ job, columns }: JobApplicationCardProps) => {
 
                 <DialogContent className='max-w-2xl'>
                     <DialogHeader>
-                        <DialogTitle>Add Job Application</DialogTitle>
-                        <DialogDescription>Track a new job application</DialogDescription>
+                        <DialogTitle>Edit Job Application</DialogTitle>
+                        <DialogDescription>Update your job application details</DialogDescription>
                     </DialogHeader>
                     <form
                         className='space-y-4'
