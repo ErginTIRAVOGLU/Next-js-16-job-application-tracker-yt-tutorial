@@ -47,8 +47,25 @@ export function useBoard(initialBoard?: Board | null) {
 
             // Update local state optimistically
             const updatedColumns = columns.map((column) => {
+                // Handle same-column reorder
+                if (column._id === oldColumnId && oldColumnId === newColumnId) {
+                    const updatedJobs = (column.jobApplications || []).filter(
+                        (job) => job._id !== jobApplicationId
+                    );
+                    // Update job metadata
+                    const updatedJob = {
+                        ...jobToMove,
+                        columnId: newColumnId,
+                        order: newOrder,
+                    };
+                    updatedJobs.splice(newOrder, 0, updatedJob);
+                    return {
+                        ...column,
+                        jobApplications: updatedJobs,
+                    };
+                }
+                // Remove from old column (cross-column move)
                 if (column._id === oldColumnId) {
-                    // Remove from old column
                     return {
                         ...column,
                         jobApplications: column.jobApplications?.filter(
@@ -56,10 +73,16 @@ export function useBoard(initialBoard?: Board | null) {
                         ) || [],
                     };
                 }
+                // Add to new column (cross-column move)
                 if (column._id === newColumnId) {
-                    // Add to new column at specified order
                     const updatedJobs = [...(column.jobApplications || [])];
-                    updatedJobs.splice(newOrder, 0, jobToMove);
+                    // Update job metadata before inserting
+                    const updatedJob = {
+                        ...jobToMove,
+                        columnId: newColumnId,
+                        order: newOrder,
+                    };
+                    updatedJobs.splice(newOrder, 0, updatedJob);
                     return {
                         ...column,
                         jobApplications: updatedJobs,

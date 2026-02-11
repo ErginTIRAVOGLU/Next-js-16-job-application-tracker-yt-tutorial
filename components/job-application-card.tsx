@@ -15,9 +15,10 @@ import { Textarea } from './ui/textarea';
 interface JobApplicationCardProps {
     job: JobApplication;
     columns: Column[];
+    onMove?: (jobId: string, columnId: string, order: number) => Promise<void>;
 }
 
-const JobApplicationCard = ({ job, columns }: JobApplicationCardProps) => {
+const JobApplicationCard = ({ job, columns, onMove }: JobApplicationCardProps) => {
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
         company: job.company,
@@ -68,11 +69,17 @@ const JobApplicationCard = ({ job, columns }: JobApplicationCardProps) => {
 
     async function handleMove(newColumnId: string) {
         try {
-            const result = await updateJobApplication(job._id, { columnId: newColumnId });
-            if (result.error) {
-                console.error("Error moving job application:", result.error);
+            // Use optimistic update if available
+            if (onMove) {
+                await onMove(job._id, newColumnId, 0);
             } else {
-                console.log("Job application moved successfully");
+                // Fallback to direct server call
+                const result = await updateJobApplication(job._id, { columnId: newColumnId });
+                if (result.error) {
+                    console.error("Error moving job application:", result.error);
+                } else {
+                    console.log("Job application moved successfully");
+                }
             }
         } catch (error) {
             console.error("Error moving job application:", error);
